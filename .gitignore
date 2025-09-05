@@ -1,0 +1,97 @@
+# ====================================
+# Python / Django
+# ====================================
+__pycache__/
+__pycode__
+*.py[cod]
+*.pyo
+*.pyc
+*.pyd
+*.pot
+*.so
+*.sql
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Entornos virtuales
+env/
+venv/
+ENV/
+.env
+*.env
+
+# Archivos de configuración locales
+*.sqlite3
+db.sqlite3
+local_settings.py
+
+# Archivos de Django
+media/
+staticfiles/
+static/
+tmp/
+*.log
+*.log.*
+
+# Migraciones compiladas
+**/migrations/__pycache__/
+**/migrations/*.pyc
+
+# ====================================
+# Node / React
+# ====================================
+# Dependencias
+frontend/node_modules/
+frontend/package-lock.json
+frontend/yarn.lock
+
+# Builds
+frontend/build/
+frontend/.cache/
+
+# Archivos temporales
+*.tmp
+*.temp
+*.swp
+*.swo
+
+# ====================================
+# IDEs y Editores
+# ====================================
+.vscode/
+.idea/
+*.iml
+# Sublime text
+*.tmlnguage.cache
+*.tmPreferences.cache
+*.stTheme.cache
+*.sublime-workspace
+*.sublime-project
+
+# ====================================
+# SO específicos
+# ====================================
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Linux
+*~
+
+# ====================================
+# Otros
+# ====================================
+# Archivos de coverage/testing
+htmlcov/
+.coverage
+.tox/
+pytest_cache/
