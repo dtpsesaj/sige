@@ -5,8 +5,9 @@ from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiExampl
 from drf_spectacular.types import OpenApiTypes
 from rest_framework.viewsets import ModelViewSet
 
-#from rest_framework import viewsets
-#from rest_framework.schemas.openapi import AutoSchema
+from django.db.models import Q
+from django.http import JsonResponse
+from django.core.paginator import Paginator
 
 from .serializers import CatCategoriaSerializer, CatRespuestaDefaultSerializer, CatSolicitudSerializer, CatContactoSerializer, CatEntidadSerializer
 from .models import CatCategoria,CatRespuestaDefault,CatSolicitud,CatContacto,CatEntidad,EntidadSistema,Historico
@@ -14,6 +15,69 @@ from .models import CatCategoria,CatRespuestaDefault,CatSolicitud,CatContacto,Ca
 def home(request):
     return HttpResponse("¡Hola! Esta es la página principal de la app Sitio.")
 
+def dashboard_entidades(request):
+    entidades = CatEntidad.objects.select_related("municipio").all()
+    paginator = Paginator(entidades, 20)  # 20 por página
+    page_number = request.GET.get("page")
+    page_obj = paginator.get_page(page_number)
+
+    return render(request, "dashboard/base.html", {
+        "page_obj": page_obj,"entidades": entidades
+    })
+
+def api_entidades(request):
+    # Parámetros de DataTables
+    draw = int(request.GET.get("draw", 1))
+    start = int(request.GET.get("start", 0))
+    length = int(request.GET.get("length", 10))
+    search_value = request.GET.get("search[value]", "").strip()
+    order_column_index = request.GET.get("order[0][column]", 0)
+    order_dir = request.GET.get("order[0][dir]", "asc")
+
+    # Columnas en el mismo orden que tu tabla
+    columns = ["nombre", "region", "personalidad", "municipio__nombre", "estatus"]
+    order_column = columns[int(order_column_index)]
+
+    if order_dir == "desc":
+        order_column = "-" + order_column
+
+    # Query base
+    queryset = CatEntidad.objects.select_related("municipio")
+
+    total_records = queryset.count()
+
+    # Filtro global
+    if search_value:
+        queryset = queryset.filter(
+            Q(nombre__icontains=search_value) |
+            Q(region__icontains=search_value) |
+            Q(personalidad__icontains=search_value) |
+            Q(municipio__nombre__icontains=search_value) |
+            Q(estatus__icontains=search_value)
+        )
+
+    filtered_records = queryset.count()
+
+    # Orden y paginación
+    entidades = queryset.order_by(order_column)[start:start+length]
+
+    # Convertir resultados
+    data = []
+    for e in entidades:
+        data.append([
+            e.nombre,
+            e.region,
+            e.personalidad,
+            e.municipio.nombre if e.municipio else "Sin municipio",
+            e.estatus,
+        ])
+
+    return JsonResponse({
+        "draw": draw,
+        "recordsTotal": total_records,
+        "recordsFiltered": filtered_records,
+        "data": data,
+    })
 
 class CatCategoriaViewSet(ModelViewSet):
     serializer_class = CatCategoriaSerializer

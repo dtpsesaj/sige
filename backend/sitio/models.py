@@ -2,6 +2,42 @@ import uuid
 from django.db import models
 from django.conf import settings
 
+
+#Agregado 10/09/2025: GG
+class CatEntidadesFederativas(models.Model):
+    class Meta:
+        db_table = "cat_entidades_federativas"
+        verbose_name = "Catálogo Entidad federativa"
+        verbose_name_plural = "Catálogo Entidades Federativas"
+        ordering = ["entidad_federativa"]
+
+    entidad_federativa = models.CharField(max_length=255)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    default = models.IntegerField(default=0)
+    orden = models.IntegerField(default=1)
+    codigo = models.CharField(max_length=45, blank=True)
+
+    def __str__(self):
+        return self.entidad_federativa
+
+#Agregado 10/09/2025: GG
+class CatMunicipios(models.Model): 
+    class Meta:
+        db_table = "cat_municipios"
+        verbose_name = "Catálogo municipios"
+        verbose_name_plural = "Catálogo Municipios"
+        ordering = ["nombre"]
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    nombre = models.CharField(max_length=255)
+    codigo = models.CharField(max_length=3)
+    cat_entidades_federativas = models.ForeignKey(CatEntidadesFederativas, on_delete=models.DO_NOTHING, null=True, blank=True)
+
+    def __str__(self):
+        return self.nombre
+    
 class CatContacto(models.Model):
     class Meta:
         db_table = "cat_contactos"
@@ -36,6 +72,7 @@ class CatContacto(models.Model):
     puesto = models.CharField(max_length=150, blank=True, null=True)
     tipo = models.CharField(max_length=20, choices=TIPO_CHOICES, default="Otro")
     otro = models.CharField(max_length=100, blank=True, null=True)
+    estatus = models.CharField(max_length=100, blank=True, null=True)
     activo = models.BooleanField(default=True, db_index=True)
 
     def __str__(self):
@@ -51,7 +88,6 @@ class CatEntidad(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    numero_municipio = models.CharField(max_length=10, blank=True, null=True)
     nombre = models.CharField(max_length=255)
     region = models.CharField(max_length=100, blank=True, null=True)
     personalidad = models.CharField(max_length=100, blank=True, null=True)
@@ -60,10 +96,17 @@ class CatEntidad(models.Model):
     ambito_gobierno = models.CharField(max_length=100, blank=True, null=True)
     poder = models.CharField(max_length=100, blank=True, null=True)
     clasificacion = models.CharField(max_length=100, blank=True, null=True)
-    servidores_publicos = models.IntegerField(default=0)
+    servidores_publicos = models.IntegerField(default=0, blank=True, null=True)
     control_tribunal = models.CharField(max_length=150, blank=True, null=True)
+    estatus = models.CharField(max_length=150, blank=True, null=True)
     activo = models.BooleanField(default=True)
 
+    municipio = models.ForeignKey(
+        "CatMunicipios",
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name="municipio",
+    )
     usuario = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
@@ -162,13 +205,25 @@ class EntidadSistema(models.Model):
     FUENTE_CHOICES = [
         ("SESAJ", "SESAJ"),
         ("SEPIFAPE", "SEPIFAPE"),
-        ("Propio", "Propio"),
+        ("propio", "Propio"),
+        ("papel", "Papel / Excel"),
+        ("sin_informacion", "Sin información"),
     ]
+
     MODO_CHOICES = [
         ("online", "Online"),
         ("local", "Local"),
         ("multiente", "Multiente"),
+        ("papel", "Papel / Execel"),
+        ("desconocido", "Se desconoce"),
     ]
+
+    TIPO_CONEXION = [
+        ("online", "En Linea (API)"),
+        ("json", "JSON"),
+        ("multiente", "Multiente"),
+    ]
+
     SISTEMA_CHOICES = [
         ("S1", "S1"),
         ("S2", "S2"),
@@ -181,7 +236,9 @@ class EntidadSistema(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     sistema = models.CharField(max_length=5, choices=SISTEMA_CHOICES, blank=True, null=True)
+    version = models.CharField(max_length=20, blank=True, null=True)
     licencia = models.CharField(max_length=555, blank=True, null=True)
+    licencia_fecha = models.DateField(blank=True, null=True)
 
     entidad = models.ForeignKey(
         CatEntidad,
@@ -193,6 +250,9 @@ class EntidadSistema(models.Model):
     operacion_modo = models.CharField(max_length=20, choices=MODO_CHOICES, blank=True, null=True)
     operacion_fecha = models.DateField(blank=True, null=True)
     sistema_operativo = models.CharField(max_length=255, blank=True, null=True)
+    pdn_conexion = models.BooleanField(default=True)
+    pdn_fecha = models.DateField(blank=True, null=True)
+    pdn_tipo_conexion = models.CharField(max_length=20, choices=TIPO_CONEXION, blank=True, null=True)
     url = models.URLField(blank=True, null=True)
     api_auth = models.CharField(max_length=255, blank=True, null=True)
     api_declaraciones = models.CharField(max_length=255, blank=True, null=True)
@@ -204,11 +264,10 @@ class EntidadSistema(models.Model):
     api_grant_type = models.CharField(max_length=255, blank=True, null=True)
     cantidad_declaraciones = models.IntegerField(blank=True, null=True)
     activo = models.BooleanField(default=True)
+    observaciones = models.TextField(blank=True, null=True)
 
     def __str__(self):
         return f"{self.entidad} - {self.sistema} ({self.fuente})"
-
-
 
 
 class Historico(models.Model):
@@ -219,12 +278,14 @@ class Historico(models.Model):
         ordering = ["-created_at"]
 
     EVENTO_CHOICES = [
+        ("default","Carga default"),
         ("cambio_datos","Cambio de datos"),
         ("llamada_informativa","Llamada informativa"),
         ("llamada_tarea","Llamada con tarea pendiente"),
         ("ticket_creado","Ticket creado"),
         ("ticket_actualizado","Ticket actualizado"),
-        ("pdn","Seguimeinto conexión PDN")
+        ("pdn","Seguimeinto conexión PDN"),
+        ("llamada_inicio","Video Conferencia de inicio a la implementación del SiDECLARA SESAJ"),
     ]
 
     created_at = models.DateTimeField(auto_now_add=True)
@@ -252,7 +313,6 @@ class Historico(models.Model):
         null=True,
         related_name="historicos_autor"
     )
-
 
     def __str__(self):
         return f"Histórico {self.tipo_evento} - {self.entidad}"

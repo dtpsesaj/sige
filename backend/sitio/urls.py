@@ -15,5 +15,7 @@ app_name = 'sitio'
 
 urlpatterns = [
     path('', views.home, name='home'),
-    path('sitio/', include(router.urls)),
+    path('restframework/', include(router.urls)),
+    path("dashboard/entidades/", views.dashboard_entidades, name="dashboard_entidades"),
+    path("api/catalogo/entidades", views.api_entidades, name="entidades_busqueda"),
 ]

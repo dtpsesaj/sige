@@ -1,0 +1,44 @@
+{% extends "dashboard/base.html" %}
+
+{% block title %}Entidades{% endblock %}
+
+{% block content %}
+<h2 class="text-center mb-4">Entidades Registradas</h2>
+
+<div class="card shadow-sm">
+  <div class="card-body">
+    <table class="table table-striped table-hover text-center align-middle">
+      <thead class="table-dark">
+        <tr>
+          <th>Nombre</th>
+          <th>Región</th>
+          <th>Poder</th>
+          <th>Clasificación</th>
+          <th>Municipio</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for entidad in entidades %}
+        <tr>
+          <td>{{ entidad.nombre }}</td>
+          <td>{{ entidad.region }}</td>
+          <td>{{ entidad.poder }}</td>
+          <td>{{ entidad.clasificacion }}</td>
+          <td>
+            {% if entidad.municipio %}
+              {{ entidad.municipio.nombre }}
+            {% else %}
+              <span class="text-muted">N/A</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="5" class="text-muted">No hay entidades registradas</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
