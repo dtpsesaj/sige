@@ -29,9 +29,9 @@ class CatContactoAdmin(admin.ModelAdmin):
     ordering = ("apellido_paterno", "nombres")
 
 class CatEntidadAdmin(admin.ModelAdmin):
-    list_display = ( "numero_municipio", "nombre", "region", "activo", "usuario", "contacto_oic")
+    list_display = ( "nombre", "region", "activo", "usuario", "contacto_oic")
     list_filter = ("region", "activo", "nombre", "usuario")
-    search_fields = ("nombre", "numero_municipio", "region", "usuario")
+    search_fields = ("nombre", "region", "usuario")
     ordering = ("nombre",)
 
 class CatRespuestaDefaultAdmin(admin.ModelAdmin):
