@@ -3,125 +3,431 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Dashboard - Entidades</title>
+    <title>Dashboard</title>
+
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- DataTables CSS -->
+    <!-- Bootstrap datatables -->
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
-</head>
-<body>
-    <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-      <div class="container-fluid">
-        <a class="navbar-brand" href="#">Dashboard</a>
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-          <span class="navbar-toggler-icon"></span>
-        </button>
-        <div class="collapse navbar-collapse" id="navbarNav">
-          <ul class="navbar-nav me-auto">
-            <li class="nav-item"><a class="nav-link" href="{% url 'sitio:dashboard_entidades' %}">Entidades</a></li>
-            <li class="nav-item"><a class="nav-link" href="#">Reportes</a></li>
-            <li class="nav-item"><a class="nav-link" href="#">Mesa de ayuda</a></li>
-          </ul>
-          <ul class="navbar-nav">
-            {% if user.is_authenticated %}
-              <li class="nav-item"><a class="nav-link" href="#">{{ user.username }}</a></li>
-              <li class="nav-item"><a class="nav-link" href="">Salir</a></li>
-            {% else %}
-              <li class="nav-item"><a class="nav-link" href="">Ingresar</a></li>
-            {% endif %}
-          </ul>
-        </div>
-      </div>
-    </nav>
-
-    <!-- Contenido -->
-    <div class="container mt-4">
-        <h2 class="text-center mb-4">Catálogo de Entidades</h2>
-        <div class="table-responsive">
-            <table id="tabla-entidades" class="table table-striped table-bordered">
-                <thead class="table-dark">
-                    <tr>
-                        <th>Nombre</th>
-                        <th>Región</th>
-                        <th>Personalidad</th>
-                        <th>Municipio</th>
-                        <th>Estatus</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for entidad in page_obj %}
-                        <tr>
-                            <td>{{ entidad.nombre }}</td>
-                            <td>{{ entidad.region }}</td>
-                            <td>{{ entidad.personalidad }}</td>
-                            <td>{{ entidad.municipio.nombre|default:"Sin municipio" }}</td>
-                            <td>{{ entidad.estatus }}</td>
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-
-        <!-- Paginación Django (si decides combinar con DataTables server-side) -->
-        <nav>
-            <ul class="pagination justify-content-center">
-                {% if page_obj.has_previous %}
-                    <li class="page-item"><a class="page-link" href="?page=1">Primera</a></li>
-                    <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">Anterior</a></li>
-                {% endif %}
-
-                <li class="page-item disabled"><span class="page-link">Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span></li>
-
-                {% if page_obj.has_next %}
-                    <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">Siguiente</a></li>
-                    <li class="page-item"><a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">Última</a></li>
-                {% endif %}
-            </ul>
-        </nav>
-    </div>
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <!-- Buscar en select -->
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <!-- Alertas dentro del sistema -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <!-- Estilos personalizados -->
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <!-- JS -->
     <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Buscar en select -->
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f5f6fa;
+        }
+
+        .sistema.col{
+            padding: 2% 0% 4% 0%;
+            border: 1px solid black;
+        }
+        .noexiste {
+            background: rgb(194, 194, 194);
+        }
+        .existe{
+            background: rgb(113, 196, 143);
+        }
+        button:disabled {
+            border: none !important;
+            outline: none !important;
+        }
+        .dropleft {
+            display: flex;
+            flex-direction: column; /* uno debajo del otro */
+            align-items: center;    /* centrar horizontal */
+            justify-content: center;/* centrar vertical si hace falta */
+        }
+
+        .primary_sige{
+            background-color: #2D5D74;
+        }
+
+         /* Sidebar */
+        #sidebar {
+            width: 250px;
+            background-color: #2D5D74;
+            color: #fff;
+            position: fixed;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            overflow-y: auto;
+            transition: all 0.3s;
+        }
+
+        #sidebar.collapsed {
+            width: 70px;
+        }
+
+        #sidebar .nav-link {
+            color: #fff;
+            padding: 10px 20px;
+        }
+
+        #sidebar .nav-link:hover, #sidebar .nav-link.active {
+            background-color: #0f344d;
+        }
+
+        #sidebar .nav-link:hover,
+        #sidebar > ul > .nav-item > .nav-link.active {
+            background-color: #0f344d;
+            color: #fff;
+        }
+
+        #sidebar .collapse .nav-link:hover,
+        #sidebar .collapse .nav-link.active {
+            background-color: #1a4b66; /* color más claro o diferente para hijos */
+            color: #fff;
+            padding-left: 1.5rem; /* opcional: para diferenciar visualmente los hijos */
+        }
+
+        #content {
+            margin-left: 250px;
+            transition: all 0.3s;
+        }
+
+        #sidebar.collapsed + #content {
+            margin-left: 70px;
+        }
+
+        .navbar {
+            background-color: #c6c9a3;
+        }
+
+        .card-info {
+            border: none;
+            background-color: #fff;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            border-radius: 10px;
+        }
+
+        .p_opciones {
+            font-size: .75rem;
+            line-height: 24px
+        }
+
+        dl.p_opciones {
+            margin-bottom: 0
+        }
+
+        .p_opciones dd,
+        .p_opciones dt {
+            display: inline
+        }
+
+        .p_opciones dt {
+            color: #000000;
+            font-weight: 100;
+            margin-right: .25rem
+        }
+
+        .text-black_opciones {
+            font-weight: 700;
+            color: #000
+        }
+
+        dd.text-black_opciones {
+            margin-bottom: 0;
+        }
+
+        .btn-etapas {
+            border: 2px solid #198754; /* Verde Bootstrap o el que prefieras */
+            color: #198754;
+            background-color: #f5fefa;
+            font-weight: 500;
+            border-radius: 8px;
+            transition: all 0.2s ease-in-out;
+        }
+
+        .btn-etapas:hover {
+            background-color: #198754;
+            color: white;
+            transform: translateY(-1px);
+        }
+
+        .btn-etapas:active {
+            background-color: #146c43; /* tono más oscuro */
+            border-color: #146c43;
+            transform: scale(0.98);
+        }
+
+        .btn-modificar-cuadrado {
+            background-color: #2D5D74;
+            width: 200px;
+            color: white;
+            border: none;
+            transition: all 0.2s ease-in-out;
+        }
+
+        .btn-modificar-cuadrado:hover {
+            background-color: #164459;
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        .icono-modificar {
+            font-size: 28px;
+            margin-bottom: 6px;
+        }
+    </style>
+</head>
+<body>
+    <div class="modal fade" id="modalEntidad" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Detalles de la Entidad</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                </div>
+            </div>
+        </div>
+    </div>
+
+<!-- Sidebar -->
+    <nav id="sidebar" class="d-flex flex-column">
+        <div class="p-3 text-center fw-bold fs-5 border-bottom border-secondary">
+            SIGE
+        </div>
+        <ul class="nav flex-column mt-2">
+            <li class="nav-item">
+                <a href="#" class="nav-link"><i class="bi bi-house"></i> <span class="ms-2">Principal</span></a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if '/entidades/' in request.path %}active{% endif %}" 
+                data-bs-toggle="collapse" href="#menuEntidades" role="button" 
+                aria-expanded="{% if '/entidades/' in request.path %}true{% else %}false{% endif %}">
+                    <i class="bi bi-building"></i> <span class="ms-2">Entidades</span>
+                </a>
+                <div class="collapse ps-4 {% if '/entidades/' in request.path %}show{% endif %}" id="menuEntidades">
+                    <a href="{% url 'sitio:entidades' %}" class="nav-link {% if request.path == '/entidades/' %}active{% endif %}">Listado</a>
+                    <a href="{% url 'sitio:entidad-nueva' %}" class="nav-link {% if request.path == '/entidades/nueva/' %}active{% endif %}">Crear entidad</a>
+                    <a href="#" class="nav-link {% if request.path == '/entidades/conexiones/' %}active{% endif %}">Conexiones PDN</a>
+                    <a href="#" class="nav-link {% if request.path == '/entidades/licencias/' %}active{% endif %}">Licencias</a>
+                    <a href="#" class="nav-link {% if request.path == '/entidades/solicitudes/' %}active{% endif %}">Solicitudes</a>
+                </div>
+            </li>
+            <li class="nav-item">
+                <a href="{% url 'sitio:estadisticas' %}"  class="nav-link {% if '/estadisticas/' in request.path %} active {% endif %} "><i class="bi bi-bar-chart"></i> <span class="ms-2">Estadísticas</span></a>
+            </li>
+            <li class="nav-item">
+                <a href="{% url 'helpdesk:helpdesk' %}" class="nav-link {% if '/helpdesk/' in request.path %} active {% endif %}"><i class="bi bi-life-preserver"></i> <span class="ms-2">Mesa de Ayuda</span></a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" data-bs-toggle="collapse" href="#menuConfig" role="button" aria-expanded="false">
+                    <i class="bi bi-gear"></i> <span class="ms-2">Configuración</span>
+                </a>
+                <div class="collapse ps-4" id="menuConfig">
+                    <a href="#" class="nav-link">Catálogos</a>
+                    <a href="#" class="nav-link">Respuestas Default</a>
+                </div>
+            </li>
+            <li class="nav-item">
+                <a href="#" class="nav-link"><i class="bi bi-file-earmark-text"></i> <span class="ms-2">Reportes</span></a>
+            </li>
+        </ul>
+        <div class="mt-auto p-3 text-center small border-top border-secondary">
+            <p class="mb-0">Tel: 33 3132 12 12</p>
+            <p class="mb-0">soporte@sesaj.org</p>
+        </div>
+    </nav>
+
+    <!-- Contenido principal -->
+    <div id="content">
+        <!-- Barra superior -->
+        <nav class="navbar navbar-expand navbar-light px-4">
+            <button id="toggleSidebar" class="btn btn-outline-secondary me-3"><i class="bi bi-list"></i></button>
+            <form class="d-flex flex-grow-1">
+                <input class="form-control me-2" type="search" placeholder="Buscar..." aria-label="Buscar">
+            </form>
+            <div class="d-flex align-items-center">
+                <i class="bi bi-bell me-3"></i>
+                <div class="dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="userDropdown" data-bs-toggle="dropdown">
+                        <i class="bi bi-person-circle"></i> {{ user.username }}
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><a class="dropdown-item" href="#">Perfil</a></li>
+                        <li><a class="dropdown-item" href="{% url 'sitio:logout' %}">Cerrar sesión</a></li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Contenido dinámico -->
+        <main class="p-4">
+            {% block content %}
+            {% endblock %}
+        </main>
+    </div>
     
-    <script>
-        $(document).ready(function() {
-            $('#tabla-entidades').DataTable({
-                "processing": true,
-                "serverSide": true,
-                "ajax": "{% url 'sitio:entidades_busqueda' %}",
-                "columns": [
-                    { "data": 0 },
-                    { "data": 1 },
-                    { "data": 2 },
-                    { "data": 3 },
-                    { "data": 4 },
-                ],
-                "lengthMenu": [ [10, 25, 50, 100], [10, 25, 50, 100] ],
-                "language": {
-                    "url": "//cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json"
-                }
+    {% block body_script %}
+        <script>
+            $(document).ready(function() {
+                var table = $('#tabla-entidades').DataTable({
+                    "processing": true,
+                    "serverSide": true,
+                    "ajax": "{% url 'api:entidades_busqueda' %}",
+                    "columns": [
+                        { "data": 0 }, // Nombre
+                        { "data": 1 }, // Región
+                        { "data": 2 }, // Personalidad
+                        { "data": 3 }, // Municipio
+                        { "data": 4 }, // Estatus
+                        { 
+                            "data": 5, // id
+                            "render": function (data, type, row) {
+                                var url = "{% url 'api:entidad_vista_rapida' 0 %}".replace("0", data);
+                                return `<button class="btn  btn-success btn-info btn-sm ver-detalles" data-id="${data}" data-url="${url}">Vista rápida</button>`;
+                            },
+                            "orderable": false,
+                            "searchable": false
+                        }
+                    ],
+                    "lengthMenu": [ [10, 25, 50, 100], [10, 25, 50, 100] ],
+                    "language": {
+                        "url": "//cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json"
+                    }
+                });
+
+                $('.select2-municipio').select2({
+                    placeholder: "Buscar municipio...",
+                    allowClear: true,
+                    width: '100%'
+                });
             });
 
-            // Agregamos inputs en cada columna del footer
-            $('#tabla-entidades tfoot th').each(function () {
-                var title = $(this).text();
-                $(this).html('<input type="text" placeholder="Buscar ' + title + '" class="form-control form-control-sm"/>');
-            });
+            $(document).on("click", ".ver-detalles", function() {
+                var url = $(this).data("url");
+                var id = $(this).data("id");
+                
+                $.ajax({
+                    url: url,
+                    method: "GET",
+                    success: function(data) {
+                        var modal = new bootstrap.Modal(document.getElementById("modalEntidad"));
+                        
+                        var body_modal = $("#modalEntidad .modal-body");
+                        var info_entidad = {
+                            "id": data["id"],
+                            "nombre": data["nombre"],
+                            "region": data["region"],
+                            "municipio": data["municipio"],
+                            "estatus": data["estatus"],
+                            "sistemas": data["sistemas"]
+                        }
+                        const sistemas = [
+                            { codigo: "S1", nombre: "Declaraciones" },
+                            { codigo: "S2", nombre: "Licitaciones" },
+                            { codigo: "S3", nombre: "Sancionados" },
+                            { codigo: "S4", nombre: "Fiscalización" },
+                            { codigo: "S5", nombre: "Denuncias" },
+                            { codigo: "S6", nombre: "Contrataciones" },
+                        ];
 
-            // Activamos la búsqueda por columna
-            table.columns().every(function () {
-                var that = this;
-                $('input', this.footer()).on('keyup change clear', function () {
-                    if (that.search() !== this.value) {
-                        that.search(this.value).draw();
+                        let html_sistemas = '<div class="container"><div class="row row-cols-6">';
+                        sistemas.forEach(s => {
+                            
+                            const sistemav = info_entidad.sistemas[s.codigo];
+                            let existe = "noexiste", disabled =  "disabled", conectado = false, fecha_cnx = false, tipo_cnx = false,
+                                        fuente = false;
+
+                            if(sistemav){                            
+                                existe = "existe"
+                                disabled = ""
+
+                                if(sistemav["pdn_conexion"]){
+                                    conectado = true
+                                    fecha_cnx = sistemav["pdn_fecha"]
+                                    tipo_cnx = sistemav["pdn_tipo_conexion"]
+                                    fuente = sistemav["fuente"]
+                                }
+                            }
+
+                            html_sistemas += `
+                                <div class="sistema col ${existe} ">
+                                    <div class="dropleft text-center">
+                                        <button type="button" ${disabled} class="btn color-neutro font-weight-bold">
+                                            <h1>${s.codigo}</h1>
+                                            <p>${s.nombre}</p>
+                                        </button>
+                                        <p style=" ${conectado ? 'font-weight:bold;' : ''}">
+                                            ${conectado ? 'Conectado' : 'No conectado'}
+                                        </p>
+                                        <small>
+                                            ${fecha_cnx ? fecha_cnx : 'Sin fecha' }
+                                            ${tipo_cnx ? ('</br>'+ tipo_cnx) : '' }
+                                            ${fuente ? ('</br>'+ fuente) : '' }
+                                        </small>
+                                    </div>
+                                </div>
+                            `;
+                        });
+
+                        html_sistemas += '</div></div>';
+                        
+                        const urlDetalles = "{% url 'sitio:entidad-detalle' 0 %}".replace("0/detalles/", "");
+                        console.log(urlDetalles);
+                        
+                        let html_entidad = `
+                            <div class="container mt-4">
+                                <div class="row">
+                                    <div class="col-md-8">
+                                        <dl class="row">
+                                            <dt class="col-sm-9">Entidad</dt>
+                                            <dd class="col-sm-9">${info_entidad.nombre}</dd>
+                                            <dt class="col-sm-9">Región</dt>
+                                            <dd class="col-sm-9">${info_entidad.region}</dd>
+                                            <dt class="col-sm-9">Municipio</dt>
+                                            <dd class="col-sm-9"> ${info_entidad.municipio}</dd>
+                                            <dt class="col-sm-9">Estatus: </dt>
+                                            <dd class="col-sm-9">${ info_entidad.estatus}</dd>
+                                        </dl>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="p-3">
+                                            <div class="d-flex justify-content-end">
+                                                <button class="btn btn-success w-100 vista-detalles" data-id="${info_entidad.id}" data-url="${urlDetalles}${info_entidad.id}/detalles/">Consultar más detalles</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        body_modal.empty();
+                        body_modal.append(html_entidad + html_sistemas)
+
+                        modal.show();
+                    },
+                    error: function() {
+                        alert("Error al cargar los detalles de la entidad.");
                     }
                 });
             });
-        });
-    </script>
+
+            $(document).on("click", ".vista-detalles", function() {
+                const url = $(this).data("url");
+                window.location.href = url; 
+            });
+        </script>
+    {% endblock %}
 </body>
 </html>

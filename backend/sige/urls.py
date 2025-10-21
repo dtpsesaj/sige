@@ -23,6 +23,10 @@ from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, Spec
 
 urlpatterns = [
     path('', include('sitio.urls')),
+    path('api', include('api.urls')),
+    path('estadisticas/', include('estadisticas.urls', namespace='estadisticas')),
+    path('helpdesk/', include('helpdesk.urls', namespace='helpdesk')),
+
     path('admin/', admin.site.urls),
 
     # DRF Spectacular

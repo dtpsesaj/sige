@@ -1,0 +1,744 @@
+{% extends "dashboard/base.html" %}
+{% load static %}
+{% load django_bootstrap5 %}
+
+{% block content %}
+<div class="mb-3">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'sitio:entidades'%}">Entidades</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Detalle</li>
+        </ol>
+    </nav>
+</div>
+
+<!-- Modal de guardando ENTIDAD -->
+<div class="modal fade" id="modalGuardando" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content text-center p-4">
+            <div class="spinner-border text-primary mb-3" role="status"></div>
+            <h5 class="mb-0">Guardando entidad...</h5>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de éxito -->
+<div class="modal fade" id="modalExito" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content text-center p-4">
+        <div class="text-success fs-1 mb-2">✅</div>
+        <h5>Dato guardado con éxito</h5>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de guardando CONTACTO -->
+<div class="modal fade" id="modalGuardandoContacto" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content text-center p-4">
+            <div class="spinner-border text-primary mb-3" role="status"></div>
+            <h5 class="mb-0">Guardando contacto...</h5>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de CONTACTO forumulario -->
+<div class="modal fade" id="modalContacto" tabindex="-1" aria-labelledby="modalContactoLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalContactoLabel">Agregar nuevo contacto</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formContacto">
+                    {% csrf_token %}
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <label for="tipo" class="form-label">Tipo de contacto</label>
+                            <select class="form-select" id="tipo" name="tipo" required>
+                                <option value="">Selecciona un tipo</option>
+                                <option value="OIC">OIC</option>
+                                <option value="Tecnico">Técnico</option>
+                                <option value="Sindico">Síndico</option>
+                                <option value="PM">PM</option>
+                                <option value="Otro">Otro</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label>Nombre</label>
+                            <input type="text" name="nombres" class="form-control" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label>Apellido paterno</label>
+                            <input type="text" name="apellido_paterno" class="form-control" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label>Apellido materno</label>
+                            <input type="text" name="apellido_materno" class="form-control">
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label>Puesto</label>
+                            <input type="text" name="puesto" class="form-control">
+                        </div>
+                        <div class="col-md-6">
+                            <label>Correo</label>
+                            <input type="email" name="correo" class="form-control">
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label>Teléfono oficina</label>
+                            <input type="text" name="telefono_oficina" class="form-control">
+                        </div>
+                        <div class="col-md-2">
+                            <label>Extención</label>
+                            <input type="text" name="telefono_oficina" class="form-control">
+                        </div>
+                        <div class="col-md-4">
+                            <label>Teléfono personal</label>
+                            <input type="text" name="telefono_personal" class="form-control">
+                        </div>
+                    </div>
+                </form>
+                <div id="mensajeGuardando" class="text-center text-muted" style="display:none;">
+                    <i class="bi bi-hourglass-split"></i> Guardando contacto...
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button 
+                    type="button" 
+                    id="btnGuardarContacto" 
+                    class="btn btn-primary"
+                    {% if not is_new %}
+                        data-url="{% url 'sitio:agregar_contacto_ajax' entidad_id=data.entidad.id %}"
+                    {% endif %}
+                >
+                    Guardar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Primera datos de la entidad -->
+<div class="row g-3 mb-4">
+    <div class="col-md-12">
+        <div class="card card-info p-3" style="height: 500px; position: relative;">
+            <!-- Header -->
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4 class="fw-bold mb-0">Datos de la Entidad</h4>
+                <button type="button" class="btn btn-modificar-cuadrado btn-modificar" {% if is_new %} style="display: none;" {% endif %}>
+                    <i class="bi bi-pencil-square"></i>
+                    Modificar
+                </button>
+            </div>
+
+            <!-- Body scrollable -->
+            <div style="overflow-y: auto; overflow-x: hidden; height: calc(100% - 70px); padding-bottom: 10px;">
+                <form 
+                    {% if is_new %}
+                        action="{% url 'sitio:entidad-nueva-guardar' id='nuevo' %}"
+                        class="entidad-nueva"
+                    {% else %}
+                        action="{% url 'sitio:entidad-actualizar' id=data.entidad.id %}"
+                    {% endif %}
+                    method="post" 
+                    id="form_entidad"
+                >
+                    {% csrf_token %}
+                    <fieldset id="fieldset_entidad" {% if not is_new %} disabled {% endif %}>
+                        <div class="row">
+                            <div class="col-12 mb-2">
+                                {% bootstrap_field form.nombre %}
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="mb-2">
+                                    <label class="form-label">Municipio</label>
+                                    {% bootstrap_field form.municipio %}
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label">Región</label>
+                                    {% bootstrap_field form.region %}
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label">Personalidad</label>
+                                    {% bootstrap_field form.personalidad %}
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-2">
+                                    <label class="form-label">Poder</label>
+                                    {% bootstrap_field form.poder %}
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label">Patrimonio</label>
+                                    {% bootstrap_field form.patrimonio %}
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label">Ámbito de gobierno</label>
+                                    {% bootstrap_field form.ambito_gobierno %}
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-2">
+                                    <label class="form-label">Usuario</label>
+                                    {% if form.usuario.value %}
+                                        {% bootstrap_field form.usuario %}
+                                    {% else %}
+                                        <p class="text-muted fst-italic">No se ha asignado un usuario.</p>
+                                    {% endif %}
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label">Control Tribunal</label>
+                                    {% bootstrap_field form.control_tribunal %}
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label">Base Legal</label>
+                                    {% bootstrap_field form.base_legal %}
+                                </div>
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+
+            <!-- Footer fijo -->
+            <div class="card-footer d-flex justify-content-end"
+                style="position: absolute; bottom: 0; left: 0; right: 0; background: white; padding: 1rem;">
+                <button class="btn btn-cancelar" style="display:none;">
+                    <i class="bi bi-x-circle"></i>
+                    Cancelar
+                </button>
+                <button type="submit" 
+                    form="form_entidad" 
+                    class="btn btn-modificar-cuadrado btn-guardar" 
+                    {% if not is_new %} style="display:none;" {% endif %} 
+                >
+                    <i class="bi bi-save"></i>
+                    Guardar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Segunda datos de los contactos -->
+<div class="row g-3 mb-4">
+    <div class="col-md-12" >
+        <div class="card card-info p-3" style="height: 450px;">
+            <!-- Header -->
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4 class="fw-bold mb-0">Datos del contacto</h4>
+                <a href="#" 
+                    class="btn btn-success d-flex align-items-center gap-2"
+                    data-bs-toggle="modal" 
+                    data-bs-target="#modalContacto"
+                    {% if is_new %} disabled style="pointer-events:none; opacity:0.5;" {% endif %}
+                    >
+                    <i class="bi bi-person-plus fs-5"></i>
+                    <span> Agregar contacto</span>
+                </a>
+            </div>
+            <div class="row" style="overflow-y: auto;">
+                <div class="row" >
+                    <div class="col-12">
+                        <h5 style="color: #a3a77d;">Contacto técnico</h5>
+                        <table class="table table-sm align-middle contactoTecnico">
+                            <thead>
+                                <tr>
+                                    <th class="">Fecha registro</th>
+                                    <th class="">Registrado por</th>
+                                    <th class="">Nombre</th>
+                                    <th class="">Puesto</th>
+                                    <th class="">Correo</th>
+                                    <th class="">Tel. oficina</th>
+                                    <th class="">Ext.</th>
+                                    <th class="">Tel. personal</th>
+                                    <th>Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% if data.contactos_tecnico %}
+                                    {% for contacto in data.contactos_tecnico %}
+                                        <tr>
+                                            <td>{{contacto.created_at|date:"d/m/Y"}}</td>
+                                            <td>{{ contacto.creado_por__username }}</td>
+                                            <td class="editable" data-field="nombres">{{contacto.nombre}} {{contacto.apellido_paterno}} {{contacto.apellido_materno}}</td>
+                                            <td class="editable" data-field="puesto">{{contacto.puesto}}</td>
+                                            <td class="editable" data-field="correo">{{contacto.correo}}</td>
+                                            <td class="editable" data-field="telefono_oficina">{{contacto.telefono_oficina}}</td>
+                                            <td class="editable" data-field="extencion">{{contacto.extencion}}</td>
+                                            <td class="editable" data-field="telefono_personal">{{contacto.telefono_personal}}</td>
+                                            <td id="{{contacto.id}}">
+                                                <button
+                                                    class="btn btn-outline-success btnEditarContacto"
+                                                    data-id="{{ contacto.id }}"
+                                                    data-entidad="{{ data.entidad.id }}"
+                                                >
+                                                    Modificar
+                                                </button>
+                                                <button class="btn btn-sm btn-success btnActualizarContacto" style="display:none;">Guardar</button>
+                                                <button class="btn btn-sm btn-secondary btnCancelarEdicionContacto" style="display:none;">
+                                                    Cancelar
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                {% else %}
+                                    <tr>
+                                        <td colspan="10">
+                                            <div class="d-flex justify-content-between align-items-center py-3 px-2 bg-light rounded">
+                                            <h5 class="text-muted mb-0">No hay registros que mostrar</h5>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <br>
+                <div class="row">
+                    <div class="col-12">
+                        <h5 style="color: #a3a77d;">Otros contactos</h5>
+                        <table class="table table-sm align-middle contactoOtros">
+                            <thead>
+                                <tr>
+                                    <th class="">Fecha registro</th>
+                                    <th class="">Registrado por</th>
+                                    <th class="">Tipo contacto</th>
+                                    <th class="">Nombre</th>
+                                    <th class="">Puesto</th>
+                                    <th class="">Correo</th>
+                                    <th class="">Tel. oficina</th>
+                                    <th class="">Ext.</th>
+                                    <th class="">Tel. personal</th>
+                                    <th>Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% if data.contactos_otros %}
+                                    {% for contacto in data.contactos_otros %}
+                                        <tr>
+                                            <td>{{contacto.created_at|date:"d/m/Y"}}</td>
+                                            <td>{{ contacto.creado_por__username }}</td>
+                                            <td class="editable" data-field="tipo">{{contacto.tipo}}</td>
+                                            <td class="editable" data-field="nombres">{{contacto.nombre}} {{contacto.apellido_paterno}} {{contacto.apellido_materno}}</td>
+                                            <td class="editable" data-field="puesto">{{contacto.puesto}}</td>
+                                            <td class="editable" data-field="correo">{{contacto.correo}}</td>
+                                            <td class="editable" data-field="telefono_oficina">{{contacto.telefono_oficina}}</td>
+                                            <td class="editable" data-field="extencion">{{contacto.extencion}}</td>
+                                            <td class="editable" data-field="telefono_personal">{{contacto.telefono_personal}}</td>
+                                            <td id="{{contacto.id}}">
+                                                <button
+                                                    class="btn btn-outline-success btnEditarContacto"
+                                                    data-id="{{ contacto.id }}"
+                                                    data-entidad="{{ data.entidad.id }}"
+                                                >
+                                                    Modificar
+                                                </button>
+                                                <button class="btn btn-sm btn-success btnActualizarContacto" style="display:none;">Guardar</button>
+                                                <button class="btn btn-sm btn-secondary btnCancelarEdicionContacto" style="display:none;">Cancelar</button>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                {% else %}
+                                    <tr>
+                                        <td colspan="10">
+                                            <div class="d-flex justify-content-between align-items-center py-3 px-2 bg-light rounded">
+                                                <h5 class="text-muted mb-0">No hay registros que mostrar</h5>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-10">
+        <!-- Segunda fila: sistemas -->
+        <div class="row g-3 mb-4">
+            {% for sistema in data.sistemas %}
+                <div class="col-md-4">
+                    <div class="card card-info h-100">
+                        <img src="" class="card-img-top">
+                        <div class="card-body">
+                            <h5 class="card-header">Sistema {{ sistema.sistema }}</h5>
+                            {% if sistema.tiene_datos %}
+                                <p class="mb-1"><strong>Modo operación:</strong> {{ sistema.operacion_modo|default:"—" }} </p>
+                                <p class="mb-1"><strong>Sistema:</strong> {{ sistema.fuente|default:"—" }} </p>
+                                <p class="mb-1"><strong>Conexión:</strong> {% if sistema.pdn_conexion %} Si {% else %} No {% endif %} </p>
+                                <p class="mb-1"><strong>Fecha conexión:</strong> {{ sistema.pdn_fecha|default:"—" }}</p>
+                                <p class="mb-1"><strong>Modo conexión:</strong> {{ sistema.pdn_tipo_conexion|default:"—" }}</p>
+                                <ul class="list-group list-group-flush">
+                                    <li class="list-group-item d-flex align-items-center"></li>
+                                    <li class="list-group-item d-flex align-items-center">
+                                        {% if sistema.pdn_conexion %}
+                                            <img src="{% static 'img/icons/conectadopdn.png' %}" alt="icono gris" class="me-2 icono-estado">
+                                            CONECTADO
+                                        {%else %}
+                                            <img src="{% static 'img/icons/noconectadopdn.png' %}" alt="icono gris" class="me-2 icono-estado">
+                                            NO CONECTADO
+                                        {% endif %}
+                                    </li>
+                                    <li class="list-group-item d-flex align-items-center">
+                                        <img src="{% static 'img/icons/noactualizado.png' %}" alt="icono verde" class="me-2 icono-estado">
+                                        NO ACTUALIZADO
+                                    </li>
+                                </ul>
+                                <div class="d-grid">
+                                    <button class="btn btn-etapas" type="button" data-bs-toggle="collapse" data-bs-target="#detalles{{sistema.sistema}}">
+                                        Ver etapas y solicitudes
+                                    </button>
+                                </div>
+                            {% else %}
+                                <div class="alert alert-light border text-muted">
+                                    <i class="bi bi-info-circle"></i> No hay información registrada para este sistema.
+                                </div>
+                                <div class="d-grid">
+                                    <button type="button" class="btn btn-etapas">
+                                        <i class="bi bi bi-hand-index-fill"></i>
+                                        Inicar proceso
+                                    </button>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+
+        <!-- Tercera fila: detalle de etapas -->
+        <div class="row g-3">
+            {% for sistema in data.sistemas %}
+                <div class="collapse" id="detalles{{sistema.sistema}}">
+                    <div class="card card-info p-3 mb-3">
+                        <h6 class="fw-bold mb-3">Etapas del sistema {{sistema.sistema}}</h6>
+                        <div class="accordion" id="accordion{{sistema.sistema}}">
+                            <div class="accordion-item">
+                                <h2 class="accordion-header" id="heading1{{sistema.sistema}}">
+                                    <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapse1{{sistema.sistema}}">
+                                        Etapa 1: Requerimientos
+                                    </button>
+                                </h2>
+                                <div id="collapse1{{sistema.sistema}}" class="accordion-collapse collapse show">
+                                    <div class="accordion-body">
+                                        Aquí se mostrarán los requerimientos cargados o pendientes.
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="accordion-item">
+                                <h2 class="accordion-header" id="heading2{{sistema.sistema}}">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse2{{sistema.sistema}}">
+                                        Etapa 2: Puesta en operación
+                                    </button>
+                                </h2>
+                                <div id="collapse2{{sistema.sistema}}" class="accordion-collapse collapse" show>
+                                    <div class="accordion-body">
+                                        Información sobre la puesta en operación del sistema {{sistema.sistema}}.
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="accordion-item">
+                                <h2 class="accordion-header" id="heading3{{sistema.sistema}}" show>
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse3{{sistema.sistema}}">
+                                        Etapa 3: Conexión PDN
+                                    </button>
+                                </h2>
+                                <div id="collapse3{{sistema.sistema}}" class="accordion-collapse collapse" show>
+                                    <div class="accordion-body">
+                                        Estado de la conexión PDN y pruebas realizadas.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+    <div class="col-md-2">
+        <!-- Histórico -->
+        <div class="card card-info p-3" style="height: 800px;overflow-y: auto;">
+            <h5 class="card-header">Histórico</h5>
+            <div class="border-bottom pb-2 mb-2">
+                <p class="mb-1"><strong>Galilea</strong></p>
+                <small class="text-muted">10/10/2025</small>
+                <p class="small text-muted mb-0">Modificación de nombre</p>
+            </div>
+            <div>
+                <p class="mb-1"><strong>Administrador</strong></p>
+                <small class="text-muted">28/09/2025</small>
+                <p class="small text-muted mb-0">Actualización de contacto</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+{% endblock %}
+
+<!-- Pequeño script para habilitar modo edición -->
+{% block body_script %}
+<script>
+    $(".btn-cancelar").click(function() {
+        $(".btn-cancelar").hide();
+        $(".btn-guardar").hide();
+
+        $(".btn-modificar").show();
+        $("#fieldset_entidad").prop("disabled", true);
+    });
+
+    $(".btn-modificar").click(function() {
+        // Ocultar botón Modificar y mostrar Guardar
+        $(".btn-modificar").hide();
+        $(".btn-guardar").show();
+        $(".btn-cancelar").show();
+
+        // Habilitar los campos
+        $("#fieldset_entidad").prop("disabled", false);
+    });
+
+    const modalGuardando = new bootstrap.Modal(document.getElementById("modalGuardando"));
+    const modalExito = new bootstrap.Modal(document.getElementById("modalExito"));
+
+    $("#form_entidad").on("submit", function (e) {
+        e.preventDefault();
+
+        const form = $(this);
+        const url = form.attr("action");
+
+        // Mostrar "Guardando..."
+        modalGuardando.show();
+
+        $.ajax({
+            url: url,
+            type: "POST",
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            data: form.serialize(),
+            success: function (response) {
+                console.log("✅ Datos guardados con éxito");
+
+                setTimeout(() => {
+                    modalGuardando.hide();
+
+                    // Mostrar modal de éxito
+                    modalExito.show();
+
+                    // Cerrar modal de éxito automáticamente
+                    setTimeout(() => modalExito.hide(), 1500);
+                }, 500);
+
+                // Desbloquear botón "Agregar contacto"
+                const btnAgregar = $("a[data-bs-target='#modalContacto']");
+                btnAgregar.prop("disabled", false).css({
+                    pointerEvents: "auto",
+                    opacity: "1"
+                });
+
+                if (response.id) {
+                    // Actualizar action del form para futuras ediciones
+                    const nuevaUrl = `/catalogo/entidad/${response.id}/actualizar/`;
+                    form.attr("action", nuevaUrl);
+
+                    // Actualizar URL visible del navegador
+                    history.replaceState(null, "", `/catalogo/entidad/${response.id}/detalles/`);
+
+                    // Actualizar URL de guardar contacto
+                    const urlContacto = `/catalogo/entidad/${response.id}/contacto/agregar/`;
+                    $("#btnGuardarContacto").data("url", urlContacto);
+                }
+
+                // Bloquear nuevamente campos después del guardado
+                $("#fieldset_entidad").prop("disabled", true);
+                $(".btn-guardar, .btn-cancelar").hide();
+                $(".btn-modificar").show();
+            },
+            error: function (xhr) {
+                modalGuardando.hide();
+                console.error("❌ Error al guardar:", xhr.responseText);
+
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error al guardar',
+                    text: 'Ocurrió un problema al guardar la entidad. Intenta nuevamente.',
+                    confirmButtonText: 'Aceptar'
+                });
+            }
+        });
+    });
+
+    document.addEventListener("DOMContentLoaded", function() {
+        const modalGuardando = new bootstrap.Modal(document.getElementById("modalGuardando"));
+        const modalExito = new bootstrap.Modal(document.getElementById("modalExito"));
+        const modalContacto = new bootstrap.Modal(document.getElementById("modalContacto"));
+        const btnGuardarContacto = document.getElementById("btnGuardarContacto");
+
+        btnGuardarContacto.addEventListener("click", function() {
+            const form = document.getElementById("formContacto");
+            const url = $("#btnGuardarContacto").data("url");
+
+            if (!url) {
+                Swal.fire({
+                    icon: "warning",
+                    title: "Entidad no guardada",
+                    text: "Primero debes guardar los datos de la entidad antes de agregar contactos.",
+                    confirmButtonText: "Entendido"
+                });
+                return;
+            }
+
+            // Desactivar botón y mostrar modal "Guardando..."
+            this.disabled = true;
+            modalContacto.hide();
+            document.querySelector("#modalGuardando h5").textContent = "Guardando contacto...";
+            modalGuardando.show();
+
+            const formData = new FormData(form);
+
+            fetch(url, {
+                method: "POST",
+                body: formData,
+                headers: {
+                    "X-CSRFToken": document.querySelector("[name=csrfmiddlewaretoken]").value
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+
+                modalGuardando.hide();
+                this.disabled = false;
+
+                if (data.success) {
+                    // Mostrar modal de éxito
+                    document.querySelector("#modalExito h5").textContent = "Contacto guardado con éxito";
+                    modalExito.show();
+
+                    // Cerrar modal de éxito automáticamente y recargar tabla
+                    setTimeout(() => {
+                        modalExito.hide();
+                        location.reload();
+                    }, 1500);
+                } else {
+                    Swal.fire({
+                        icon: "error",
+                        title: "Error al guardar",
+                        text: data.error || "Ocurrió un problema al guardar el contacto.",
+                        confirmButtonText: "Aceptar"
+                    });
+                }
+            })
+            .catch(error => {
+                modalGuardando.hide();
+                this.disabled = false;
+                console.error("Error:", error);
+
+                Swal.fire({
+                    icon: "error",
+                    title: "Error de red",
+                    text: "Ocurrió un error de conexión al guardar el contacto.",
+                    confirmButtonText: "Aceptar"
+                });
+            });
+        });
+    });
+
+
+    document.addEventListener("DOMContentLoaded", () => {
+        const modalGuardando = new bootstrap.Modal(document.getElementById("modalGuardando"));
+        const modalExito = new bootstrap.Modal(document.getElementById("modalExito"));
+
+        // 🟢 Clic en "Modificar"
+        $(document).on("click", ".btnEditarContacto", function () {
+            const fila = $(this).closest("tr");
+
+            // Guardar valores originales en data
+            fila.find(".editable").each(function () {
+            $(this).data("original", $(this).text().trim());
+            const campo = $(this).data("field");
+            const valor = $(this).text().trim();
+            $(this).html(`<input class="form-control form-control-sm" name="${campo}" value="${valor}">`);
+            });
+
+            fila.find(".btnEditarContacto").hide();
+            fila.find(".btnActualizarContacto, .btnCancelarEdicionContacto").show();
+        });
+
+        // 🟡 Clic en "Guardar"
+        $(document).on("click", ".btnActualizarContacto", function () {
+            const fila = $(this).closest("tr");
+            const entidadId = fila.data("entidad");
+            const contactoId = fila.data("id");
+
+            const datos = {};
+            fila.find("input").each(function () {
+            datos[$(this).attr("name")] = $(this).val();
+            });
+
+            modalGuardando.show();
+
+            fetch(`/catalogo/entidad/${entidadId}/contacto/${contactoId}/actualizar/`, {
+                method: "POST",
+                headers: {
+                    "X-CSRFToken": document.querySelector("[name=csrfmiddlewaretoken]").value,
+                    "X-Requested-With": "XMLHttpRequest",
+                },
+                body: new URLSearchParams(datos)
+            })
+            .then(res => res.json())
+            .then(data => {
+                modalGuardando.hide();
+                if (data.success) {
+                // Actualiza las celdas con el nuevo texto
+                    fila.find("input").each(function () {
+                        const valor = $(this).val();
+                        $(this).parent().text(valor);
+                    });
+                    fila.find(".btnActualizarContacto, .btnCancelarEdicionContacto").hide();
+                    fila.find(".btnEditarContacto").show();
+
+                    modalExito.show();
+                    setTimeout(() => modalExito.hide(), 1000);
+                } else {
+                    alert("Error: " + (data.error || "No se pudo actualizar el contacto."));
+                }
+            })
+            .catch(err => {
+                modalGuardando.hide();
+                console.error(err);
+                alert("Error de red al guardar los cambios.");
+            });
+        });
+
+        // 🔴 Clic en "Cancelar"
+        $(document).on("click", ".btnCancelarEdicionContacto", function () {
+            const fila = $(this).closest("tr");
+            fila.find(".editable").each(function () {
+            $(this).text($(this).data("original")); // restaurar valor original
+            });
+            fila.find(".btnActualizarContacto, .btnCancelarEdicionContacto").hide();
+            fila.find(".btnEditarContacto").show();
+        });
+    });
+
+
+
+</script>
+{% endblock %}
