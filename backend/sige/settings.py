@@ -12,8 +12,14 @@ https://docs.djangoproject.com/en/3.2/ref/settings/
 import os
 from pathlib import Path
 
+import environ
+
+# Inicializar
+env = environ.Env()
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 
 
 # Quick-start development settings - unsuitable for production
@@ -26,7 +32,7 @@ SECRET_KEY = 'django-insecure-bp7po9awi7^30b(l0z6kn6sjufqco@a8!%1ktuk*iwm)t!u4y#
 DEBUG = True
 
 ALLOWED_HOSTS = ['100.24.98.184', 'localhost']
-
+ULTIMA_VERSION = "3.2.3"
 
 # Application definition
 
@@ -40,7 +46,10 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework_simplejwt',
     'drf_spectacular',
+    'django_bootstrap5',
+    'api',
     'sitio',
+    'estadisticas',
     'helpdesk'
 ]
 
@@ -140,6 +149,9 @@ USE_TZ = True
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, 'static'),  # <-- Carpeta donde tienes tus imágenes y CSS
+]
 # Default primary key field type
 # https://docs.djangoproject.com/en/3.2/ref/settings/#default-auto-field
 
@@ -170,14 +182,29 @@ REST_FRAMEWORK = {
 from datetime import timedelta
 
 SIMPLE_JWT = {
-   'AUTH_HEADER_TYPES' : ('Bearer', ),
-   'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60*24), # 24 hours
-   'REFRESH_TOKEN_LIFETIME': timedelta(days=30), # 30 days
-   'ROTATE_REFRESH_TOKENS': True,
-   'BLACKLIST_AFTER_ROTATION': True,
-   'AUTH_TOKEN_CLASSES': (
-       'rest_framework_simplejwt.tokens.AccessToken',
-   )
+    'AUTH_HEADER_TYPES' : ('Bearer', ),
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60*24), # 24 hours
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=30), # 30 days
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': True,
+    'AUTH_TOKEN_CLASSES': (
+        'rest_framework_simplejwt.tokens.AccessToken',
+    )
 }
 
 LOGIN_URL = 'rest_framework:login'
+
+EMAIL_BACKEND = ''
+EMAIL_SENDER= ''
+ANYMAIL = {
+    "MANDRILL_API_KEY": 'emailapikey',
+}
+
+
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = env('EMAIL_USER')
+EMAIL_HOST_PASSWORD = env('EMAIL_PASS')
+DEFAULT_FROM_EMAIL = f"SIGE <{env('EMAIL_USER')}>"

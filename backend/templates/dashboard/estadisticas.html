@@ -1,0 +1,297 @@
+{% extends "dashboard/base.html" %}
+
+{% block title %}Estadisticas{% endblock %}
+
+{% block content %}
+<div class="mb-3">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'sitio:estadisticas'%}">Estadisticas</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Inicio</li>
+        </ol>
+    </nav>
+</div>
+
+    <div class="container mt-4">
+      <h1>Estadísticas</h1>
+    <div class="card-header">
+  Versiones del Sistema 1
+  <div class="filters">
+    <select id="regionFilterS1">
+      <option value="">Todas las regiones</option>
+      <option value="Centro">Centro</option>
+      <option value="Norte">Norte</option>
+      <option value="Sur">Sur</option>
+    </select>
+    <select id="anioFilterS1">
+      <option value="">Todos los años</option>
+      <option value="2023">2023</option>
+      <option value="2024">2024</option>
+      <option value="2025">2025</option>
+    </select>
+    <button onclick="loadVersionesS1()">Aplicar</button>
+  </div>
+</div>
+    <div class="row">
+        <div class="col-md-6 chart-card">
+            <div class="card">
+            <div class="card-header">Entidades por sistema (S1..S6)</div>
+            <div class="card-body">
+                <canvas id="chartPorSistema" height="200"></canvas>
+            </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 chart-card">
+            <div class="card">
+            <div class="card-header">Entidades conectadas por año (por sistema)</div>
+            <div class="card-body">
+                <canvas id="chartPorAnio" height="200"></canvas>
+            </div>
+            </div>
+        </div>
+    </div>
+
+
+
+<div class="card-header">
+  Distribución de <span id="sistemaSeleccionado">S1</span> por región
+  <div class="filters">
+    <select id="sistemaFilter">
+      <option value="S1">S1</option>
+      <option value="S2">S2</option>
+      <option value="S3">S3</option>
+    </select>
+    <select id="regionFilter">
+      <option value="">Todas las regiones</option>
+      <option value="Centro">Centro</option>
+      <option value="Norte">Norte</option>
+      <option value="Sur">Sur</option>
+    </select>
+    <select id="anioFilter">
+      <option value="">Todos los años</option>
+      <option value="2023">2023</option>
+      <option value="2024">2024</option>
+      <option value="2025">2025</option>
+    </select>
+    <button onclick="loadSistemaRegion()">Aplicar</button>
+  </div>
+</div>
+    <div class="row mt-3">
+        <div class="col-md-6 chart-card">
+            <div class="card">
+            <div class="card-header">
+                Distribución de <span id="sistemaSeleccionado">S1</span> por región
+            </div>
+            <div class="card-body">
+                <canvas id="chartPorRegion" height="200"></canvas>
+            </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 chart-card">
+            <div class="card">
+            <div class="card-header">Versiones del Sistema 1</div>
+            <div class="card-body">
+                <canvas id="chartVersionesS1" height="200"></canvas>
+            </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+
+{% block body_script %}
+    <script>
+        let chartVersiones = null; // global
+        let chartRegion = null;    // global
+
+
+        function randomColor(opacity=0.7) {
+            // colores suaves para series
+            const r = Math.floor(Math.random()*150)+40;
+            const g = Math.floor(Math.random()*150)+40;
+            const b = Math.floor(Math.random()*150)+40;
+            return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+            }
+
+            // 1) Entidades por sistema (barra)
+            $.getJSON("{% url 'estadisticas:api_entidades_por_sistema' %}", function(resp) {
+            const ctx = document.getElementById('chartPorSistema').getContext('2d');
+            const chart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                labels: resp.systems,
+                datasets: [{
+                    label: 'Entidades',
+                    data: resp.counts,
+                    backgroundColor: resp.systems.map(()=> randomColor(0.7)),
+                    borderColor: resp.systems.map(()=> randomColor(1)),
+                    borderWidth: 1
+                }]
+                },
+                options: {
+                responsive: true,
+                plugins: {
+                    legend: { display: false },
+                    title: { display: false }
+                },
+                scales: {
+                    y: { beginAtZero: true }
+                }
+                }
+            });
+            });
+
+            // 2) Entidades conectadas por año por sistema (líneas)
+            $.getJSON("{% url 'estadisticas:api_entidades_por_anio' %}", function(resp) {
+            const ctx = document.getElementById('chartPorAnio').getContext('2d');
+
+            // map datasets and add colors
+            const datasets = resp.datasets.map(function(ds) {
+                const color = randomColor(0.6);
+                return {
+                label: ds.label,
+                data: ds.data,
+                fill: false,
+                borderWidth: 2,
+                borderColor: color,
+                backgroundColor: color,
+                tension: 0.2
+                };
+            });
+
+            const chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                labels: resp.years,
+                datasets: datasets
+                },
+                options: {
+                responsive: true,
+                plugins: {
+                    legend: { position: 'bottom' }
+                },
+                scales: {
+                    y: { beginAtZero: true }
+                }
+                }
+                });
+            });
+        
+            function loadSistemaRegion(sistema="S1") {
+    $.getJSON("{% url 'estadisticas:api_sistemas_por_region' %}?sistema=" + sistema, function(resp) {
+      $("#sistemaSeleccionado").text(resp.sistema);
+
+      const ctx = document.getElementById('chartPorRegion').getContext('2d');
+      new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: resp.labels,
+          datasets: [{
+            label: `Entidades con ${resp.sistema}`,
+            data: resp.counts,
+            backgroundColor: resp.labels.map(()=> randomColor(0.7)),
+            borderColor: resp.labels.map(()=> randomColor(1)),
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { position: 'right' }
+          }
+        }
+      });
+    });
+  }
+
+  // inicializamos con S1
+  loadSistemaRegion("S1");
+
+
+  // 4) Gráfica circular: versiones de S1
+  $.getJSON("{% url 'estadisticas:api_versiones_s1' %}", function(resp) {
+    const ctx = document.getElementById('chartVersionesS1').getContext('2d');
+    new Chart(ctx, {
+      type: 'pie',
+      data: {
+        labels: resp.labels,
+        datasets: [{
+          label: "Versiones de S1",
+          data: resp.counts,
+          backgroundColor: resp.labels.map(()=> randomColor(0.7)),
+          borderColor: resp.labels.map(()=> randomColor(1)),
+          borderWidth: 1
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { position: 'bottom' }
+        }
+      }
+    });
+  });
+
+
+function loadSistemaRegion() {
+  const sistema = $("#sistemaFilter").val();
+  const region = $("#regionFilter").val();
+  const anio = $("#anioFilter").val();
+
+  const params = $.param({ sistema, region, anio });
+  $.getJSON("{% url 'estadisticas:api_sistemas_por_region' %}?" + params, function(resp) {
+    $("#sistemaSeleccionado").text(resp.sistema);
+
+    if (chartRegion) chartRegion.destroy(); // limpiar vieja gráfica
+
+    const ctx = document.getElementById('chartPorRegion').getContext('2d');
+    chartRegion = new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: resp.labels,
+        datasets: [{
+          data: resp.counts,
+          backgroundColor: resp.labels.map(()=> randomColor(0.7)),
+        }]
+      },
+      options: { plugins: { legend: { position: 'right' } } }
+    });
+  });
+}
+
+
+function loadVersionesS1() {
+  const region = $("#regionFilterS1").val();
+  const anio = $("#anioFilterS1").val();
+
+  const params = $.param({ region, anio });
+
+  $.getJSON("{% url 'estadisticas:api_versiones_s1' %}?" + params, function(resp) {
+    // Destruye la gráfica previa si existe
+    if (chartVersiones !== null) {
+      chartVersiones.destroy();
+    }
+
+    const ctx = document.getElementById('chartVersionesS1').getContext('2d');
+    chartVersiones = new Chart(ctx, {
+      type: 'pie',
+      data: {
+        labels: resp.labels,
+        datasets: [{
+          data: resp.counts,
+          backgroundColor: resp.labels.map(() => randomColor(0.7)),
+        }]
+      },
+      options: {
+        plugins: { legend: { position: 'bottom' } }
+      }
+    });
+  });
+}
+
+
+
+    </script>
+{% endblock %}

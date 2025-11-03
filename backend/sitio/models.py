@@ -2,6 +2,18 @@ import uuid
 from django.db import models
 from django.conf import settings
 
+from django.contrib.auth.models import User
+
+from mptt.models import MPTTModel, TreeForeignKey
+
+SISTEMA_CHOICES = [
+    ("S1", "S1"),
+    ("S2", "S2"),
+    ("S3", "S3"),
+    ("S4", "S4"),
+    ("S5", "S5"),
+    ("S6", "S6"),
+]
 
 #Agregado 10/09/2025: GG
 class CatEntidadesFederativas(models.Model):
@@ -37,7 +49,27 @@ class CatMunicipios(models.Model):
 
     def __str__(self):
         return self.nombre
-    
+
+
+class CatEtapas(MPTTModel): 
+    class Meta:
+        db_table = "cat_etapas"
+        verbose_name = "Catálogo etapa"
+        verbose_name_plural = "Catálogo Etapas"
+        ordering = ["nombre"]
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    sistema = models.CharField(max_length=20, choices=SISTEMA_CHOICES, default="S1")
+    nombre = models.CharField(max_length=255)
+    codigo = models.CharField(max_length=45, blank=True, null=True)
+    order = models.IntegerField(default=1)
+    parent = TreeForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='children')
+
+    def __str__(self):
+        return f"{self.codigo} - {self.nombre}"
+
+
 class CatContacto(models.Model):
     class Meta:
         db_table = "cat_contactos"
@@ -60,6 +92,12 @@ class CatContacto(models.Model):
         on_delete=models.CASCADE,
         related_name="entidad"
     )
+    creado_por = models.ForeignKey(
+        User, 
+        on_delete=models.SET_NULL, 
+        null=True,
+        blank=True
+    )
 
     nombres = models.CharField(max_length=150, db_index=True)
     apellido_paterno = models.CharField(max_length=150)
@@ -67,6 +105,7 @@ class CatContacto(models.Model):
     fecha_inicio = models.DateField(blank=True, null=True)
     fecha_fin = models.DateField(blank=True, null=True)
     telefono_oficina = models.CharField(max_length=50, blank=True, null=True)
+    extencion = models.CharField(max_length=50, blank=True, null=True)
     telefono_personal = models.CharField(max_length=50, blank=True, null=True)
     correo = models.EmailField(max_length=255, blank=True, null=True, db_index=True)
     puesto = models.CharField(max_length=150, blank=True, null=True)
@@ -92,7 +131,7 @@ class CatEntidad(models.Model):
     region = models.CharField(max_length=100, blank=True, null=True)
     personalidad = models.CharField(max_length=100, blank=True, null=True)
     patrimonio = models.CharField(max_length=255, blank=True, null=True)
-    base_legal = models.CharField(max_length=255, blank=True, null=True)
+    base_legal = models.CharField(max_length=1000, blank=True, null=True)
     ambito_gobierno = models.CharField(max_length=100, blank=True, null=True)
     poder = models.CharField(max_length=100, blank=True, null=True)
     clasificacion = models.CharField(max_length=100, blank=True, null=True)
@@ -147,6 +186,28 @@ class CatCategoria(models.Model):
         return self.titulo
 
 
+class CatQueue(models.Model):
+    class Meta:
+        db_table = "cat_queue"
+        verbose_name = "Catálogo Cola"
+        verbose_name_plural = "Catálogo Colas"
+        ordering = ["titulo"]
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    titulo = models.CharField(max_length=200)
+    visible = models.BooleanField(default=True)
+    propietario_default = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name="propietario_default",
+    )
+
+    def __str__(self):
+        return self.titulo
+
+
 class CatRespuestaDefault(models.Model):
     class Meta:
         db_table = "cat_respuestas_default"
@@ -160,8 +221,15 @@ class CatRespuestaDefault(models.Model):
     respuesta = models.TextField()
     visible = models.BooleanField(default=True)
 
+    CatQueue = models.ForeignKey(
+        "CatQueue",
+        on_delete=models.CASCADE,
+        related_name="cola"
+    )
+
     def __str__(self):
         return self.titulo
+
 
 class CatSolicitud(models.Model):
     class Meta:
@@ -195,6 +263,7 @@ class CatSolicitud(models.Model):
     def __str__(self):
         return f"Solicitud {self.folio} - {self.entidad_sistema}"
 
+
 class EntidadSistema(models.Model):
     class Meta:
         db_table = "sige_entidades_sistema"
@@ -216,21 +285,13 @@ class EntidadSistema(models.Model):
         ("multiente", "Multiente"),
         ("papel", "Papel / Execel"),
         ("desconocido", "Se desconoce"),
+        ("extinto", "Extinto"),
     ]
 
     TIPO_CONEXION = [
         ("online", "En Linea (API)"),
         ("json", "JSON"),
         ("multiente", "Multiente"),
-    ]
-
-    SISTEMA_CHOICES = [
-        ("S1", "S1"),
-        ("S2", "S2"),
-        ("S3", "S3"),
-        ("S4", "S4"),
-        ("S5", "S5"),
-        ("S6", "S6"),
     ]
 
     created_at = models.DateTimeField(auto_now_add=True)
@@ -243,7 +304,7 @@ class EntidadSistema(models.Model):
     entidad = models.ForeignKey(
         CatEntidad,
         on_delete=models.CASCADE,
-        related_name="entidad_relacion"
+        related_name="entidad_sistemas"
     )
 
     fuente = models.CharField(max_length=20, choices=FUENTE_CHOICES, blank=True, null=True)
@@ -268,6 +329,81 @@ class EntidadSistema(models.Model):
 
     def __str__(self):
         return f"{self.entidad} - {self.sistema} ({self.fuente})"
+
+
+class EtapasSistema(models.Model):
+    class Meta:
+        db_table = "sige_etapas_sistemas"
+        verbose_name = "Etapa sistema"
+        verbose_name_plural = "Etapas sistemas"
+        ordering = ["-created_at"]
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    fecha_etapa = models.DateField(blank=True, null=True)
+    descripcion = models.TextField(blank=True, null=True)
+    completada = models.BooleanField(default=True)
+    aplica = models.BooleanField(default=True)
+    
+    etapa = models.ForeignKey(
+        CatEtapas,
+        on_delete=models.CASCADE,
+        related_name="estatus_etapa"
+    )
+
+    entidadSistema = models.ForeignKey(
+        EntidadSistema,
+        on_delete=models.CASCADE,
+        related_name="etapa_sistema_entidad"
+    )
+
+    def __str__(self):
+        return f"{self.etapa.codigo}"
+
+
+class ObservacionEtapa(models.Model):
+    class Meta:
+        db_table = "observaciones_etapa"
+        verbose_name = "Observación por etapa"
+        verbose_name_plural = "Observaciones por etapa"
+        ordering = ["-fecha"]
+
+    TIPO_INTERACCION_CHOICES = [
+        ("llamada", "Llamada telefónica"),
+        ("correo", "Correo electrónico"),
+        ("reunion", "Reunión presencial/virtual"),
+        ("nota", "Nota interna"),
+    ]
+
+    fecha = models.DateTimeField(auto_now_add=True, verbose_name="Fecha de la observación")
+    descripcion = models.TextField(verbose_name="Descripción / comentario")
+
+    etapa = models.ForeignKey(
+        "etapasSistema",
+        on_delete=models.CASCADE,
+        related_name="observaciones",
+        verbose_name="Etapa del sistema"
+    )
+
+    autor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="observaciones_realizadas",
+        verbose_name="Usuario que registra"
+    )
+
+    tipo_interaccion = models.CharField(
+        max_length=50,
+        choices=TIPO_INTERACCION_CHOICES,
+        default="nota",
+        verbose_name="Tipo de interacción"
+    )
+
+
+    def __str__(self):
+        return f"{self.etapa} - {self.tipo_interaccion} ({self.fecha.strftime('%Y-%m-%d %H:%M')})"
 
 
 class Historico(models.Model):

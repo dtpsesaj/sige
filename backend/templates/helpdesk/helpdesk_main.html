@@ -1,0 +1,107 @@
+{% extends "dashboard/base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="mb-3">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="#">Helpdesk</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Inicio</li>
+        </ol>
+    </nav>
+</div>
+
+<div class="container mt-4 mb-5">
+
+    <div class="row g-4 mb-4">
+        <div class="col-md-4">
+        <div class="card shadow-sm border-0 primary_sige text-white">
+            <div class="card-body">
+            <h6 class="fw-semibold text-uppercase">Tickets nuevos en el mes</h6>
+            <h3 class="fw-bold mt-2 mb-0">12</h3>
+            <small class="text-light">Actualizado hace 2 horas</small>
+            </div>
+        </div>
+        </div>
+        <div class="col-md-4">
+        <div class="card shadow-sm border-0 text-dark" style="background-color: rgb(154, 189, 219);">
+            <div class="card-body">
+            <h6 class="fw-semibold text-uppercase">Tickets respondidos este mes</h6>
+            <h3 class="fw-bold mt-2 mb-0">8</h3>
+            <small class="text-muted">Actualizado hace 2 horas</small>
+            </div>
+        </div>
+        </div>
+        <div class="col-md-4">
+        <div class="card shadow-sm border-0 text-white" style="background-color: #9da266;">
+            <div class="card-body">
+            <h6 class="fw-semibold text-uppercase">Tickets resueltos este mes</h6>
+            <h3 class="fw-bold mt-2 mb-0">5</h3>
+            <small class="text-light">Actualizado hace 2 horas</small>
+            </div>
+        </div>
+        </div>
+    </div>
+
+    <!-- 🔸 Encabezado -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4 class="fw-bold mb-0">Tickets abiertos</h4>
+        <a href="#" class="btn btn-success d-flex align-items-center">
+        <i class="bi bi-plus-circle me-2"></i> Crear nuevo ticket
+        </a>
+    </div>
+
+    <!-- 🔹 Tabla -->
+    <div class="card shadow-sm border-0 table-responsive">
+        <div class="card-body">
+        <table id="tablaTickets" class="table table-hover align-middle">
+            <thead class="table-light">
+            <tr>
+                <th scope="col"># Ticket</th>
+                <th scope="col">Título</th>
+                <th scope="col">Fecha de creación</th>
+                <th scope="col">Creado por</th>
+                <th scope="col">Asignado a</th>
+                <th scope="col">Respondido</th>
+                <th scope="col">Prioridad</th>
+            </tr>
+            </thead>
+            <tbody>
+            <!-- Ejemplo de fila -->
+            <tr>
+                <td>1001</td>
+                <td>Error al iniciar sesión</td>
+                <td>Creado hace 1 hora</td>
+                <td>Rosario Galilea</td>
+                <td>Soporte #2</td>
+                <td><span class="badge bg-success">Sí</span></td>
+                <td><span class="badge bg-danger">Alta</span></td>
+            </tr>
+            <tr>
+                <td>1002</td>
+                <td>No puedo acceder a reportes</td>
+                <td>Creado hace 3 horas</td>
+                <td>Juan López</td>
+                <td>Soporte #1</td>
+                <td><span class="badge bg-secondary">No</span></td>
+                <td><span class="badge bg-warning text-dark">Media</span></td>
+            </tr>
+            </tbody>
+        </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block body_script %}
+<script>
+    $('#tablaTickets').DataTable({
+        language: {
+            url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json'
+        },
+        order: [[0, 'desc']],  // Ordenar por número de ticket descendente
+        pageLength: 5
+    });
+</script>
+
+{% endblock %}

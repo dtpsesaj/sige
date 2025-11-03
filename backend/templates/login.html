@@ -1,0 +1,146 @@
+{% load static %}
+{% load django_bootstrap5 %}
+<!DOCTYPE html>
+<html lang="es">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Iniciar sesión - SIGE</title>
+
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css"/>
+        <link rel="stylesheet" href="{% static 'assets/css/login.css' %}">
+    </head>
+    <body>
+        <section id="reg_login">
+            <div class="container">
+                <div class="user signinBx">
+                    <div class="imgBx">
+                        <img id="imgMain" src="{% static 'img/sesion.png' %}" alt="" />
+                    </div>
+                    <div class="formBx">
+                        <!-- LOGIN FORM -->
+                        <form id="loginForm" action="{% url 'sitio:login' %}" method="post">
+                            {% csrf_token %}
+                            <h1>Ingresa aquí</h1>
+                            <p>Para descargar e instalar SiDECLARA SESAJ en tu Ente Público</p>
+                            <input type="text" name="username" placeholder="Username" required />
+                            <input type="password" name="password" placeholder="Password" required />
+                            <p class="link" id="showRecover">¿Desea recuperar la contraseña? </p>
+                            <input type="submit" name="Login" value="Login" />
+                            <p class="signup">
+                                Crea tu cuenta 
+                                <a href="#" onclick="toggleForm();">Aquí.</a>
+                            </p>
+                        </form>
+                        <!-- RECOVER FORM -->
+                        <form id="recoverForm" class="d-none">
+                            {% csrf_token %}
+                            <h1>Recuperar contraseña</h1>
+                            <p>Ingresa tu usuario o correo</p>
+                            <input type="text" id="identificador" placeholder="Usuario o correo" required />
+                            <input type="submit" id="enviarCorreo" value="Enviar" />
+                            <p class="link" id="showLogin">
+                                <i class="bi bi-arrow-bar-left heading" style="font-size: 1.2rem;"></i>
+                                Volver al inicio
+                            </p>
+                            <div id="msgContainer" style="position: relative; margin-top: 3rem;">
+                                <div class="loader" id="loader" style="display: none;"></div>
+                                <p id="msg" style="position: absolute; top: -40%; left: 50%; transform: translate(-50%, -50%); margin: 0; font-size: 14px; font-weight: 500; color: #1a4b66;">
+                                </p>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                <div class="user signupBx">
+                    <div class="formBx">
+                        <form action="#" method="post">
+                            <h1 style="color: green;">Crear cuenta</h1>
+                            <input type="text" name="username" placeholder="Username" required />
+                            <input type="email" name="email" placeholder="Email Address" required />
+                            <input type="password" name="password" placeholder="Create Password" required />
+                            <input type="password" name="conpass" placeholder="Confirm Password" required />
+                            <input type="submit" name="signup" value="Sign Up" />
+                            <p class="signup">
+                                Sí ya tienes cuenta,
+                                <a href="#" onclick="toggleForm();">Inicia sesión.</a>
+                            </p>
+                        </form>
+                    </div>
+                    <div class="imgBx">
+                        <img src="{% static 'img/registrate.png' %}" alt="" />
+                    </div>
+                </div>
+            </div>
+        </section>
+        <script>
+            const toggleForm = () => {
+                const container = document.querySelector(".container");
+                container.classList.toggle("active");
+            };
+
+            const loginForm = document.getElementById("loginForm");
+            const recoverForm = document.getElementById("recoverForm");
+            const showRecover = document.getElementById("showRecover");
+            const showLogin = document.getElementById("showLogin");
+            const img = document.getElementById("imgMain");
+            const msg = document.getElementById("msg");
+            const btn_enviarCorreo = document.getElementById("enviarCorreo");
+
+            showRecover.addEventListener("click", () => {
+                loginForm.classList.add("d-none");
+                recoverForm.classList.remove("d-none");
+                img.src = "{% static 'img/recuperar.png' %}";
+            });
+
+            showLogin.addEventListener("click", () => {
+                recoverForm.classList.add("d-none");
+                loginForm.classList.remove("d-none");
+                img.src = "{% static 'img/sesion.png' %}";
+                msg.textContent = "";
+            });
+
+            recoverForm.addEventListener("submit", async (e) => {
+                e.preventDefault();
+
+                // Mostrar texto + loader
+                msg.textContent = "Enviando solicitud...";
+                msg.style.color = "#1a4b66";
+                loader.style.display = "block";
+
+                btn_enviarCorreo.disabled = true;
+                btn_enviarCorreo.style.opacity = "0.6";
+                btn_enviarCorreo.style.cursor = "not-allowed";
+
+                const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+                const identificador = document.getElementById("identificador").value;
+
+                try {
+                    const response = await fetch("{% url 'sitio:password_reset_request' %}", {
+                        method: "POST",
+                        headers: {
+                            "X-CSRFToken": csrfToken,
+                            "Content-Type": "application/x-www-form-urlencoded",
+                        },
+                        body: `identificador=${encodeURIComponent(identificador)}`,
+                    });
+
+                    const data = await response.json();
+
+                    // Mostrar mensaje de éxito/error
+                    msg.textContent = data.message;
+                    msg.style.color = data.ok ? "green" : "red";
+                } catch (error) {
+                    msg.textContent = "Ocurrió un error al enviar la solicitud.";
+                    msg.style.color = "red";
+                } finally {
+                    // Ocultar loader siempre al terminar
+                    loader.style.display = "none";
+                    btn_enviarCorreo.disabled = false;
+                    btn_enviarCorreo.style.opacity = "1";
+                    btn_enviarCorreo.style.cursor = "pointer";
+                }
+            });
+        </script>
+    </body>
+</html>
